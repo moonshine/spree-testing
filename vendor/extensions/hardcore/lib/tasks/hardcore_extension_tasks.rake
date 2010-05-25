@@ -1,3 +1,12 @@
+FILE_PREFIX = 'HC'
+FTP_HOST = 'ftp.hardcore.com.au'
+FTP_USR = 'ap21@hardcore.com.au'
+FTP_PASS = 'abc+123'
+IN_PATH = 'IN'
+OUT_PATH = 'OUT'
+
+require 'net/ftp'
+
 namespace :spree do
   namespace :extensions do
     namespace :hardcore do
@@ -17,9 +26,41 @@ namespace :spree do
       # TODO: Implement FTP connection
       #       Preferences setting for FTP 
       namespace :import do
+
+        desc "Fetch all files from FTP"
+        task :ftp, [:file] => :environment do |t , args|
+          puts 'Connecting to FTP...'
+          ftp = Net::FTP.open(FTP_HOST, FTP_USR, FTP_PASS)
+          begin
+            puts 'Connected'
+            ftp.chdir(IN_PATH)
+            #We only fetch files with suffix that match today
+            puts 'Checking for update...'
+
+            filenames = ftp.nlst("#{FILE_PREFIX}_*_#{Time.now.strftime("%Y%m%d")}*")
+            unless filenames.count.zero?
+              filenames.each{ |filename| 
+                puts "Fetching #{filename} ..."
+                ftp.getbinaryfile(filename,"#{RAILS_ROOT}/tmp/#{filename}")
+                puts 'Done'
+              }
+            else
+              puts 'Sorry, there is no new updates'
+            end
+          ensure
+            ftp.close unless ftp.nil?
+            puts 'Disconnected'
+          end
+        end
+        
+        
         # rake spree:extensions:hardcore:import:product
         desc "Fetch Product table from CSV file on FTP and import all into DB"
         task :products => :environment do
+          #Fetch all files from FTP first
+          Rake::Task["spree:extensions:hardcore:import:ftp"].invoke
+        
+          
           file = "#{RAILS_ROOT}/IMPORT/products_20100517120000.csv"
           header = %w(STYLE_NUMBER STYLE_DESC STYLE_FLAG SUPPLIER BRAND CATEGORY GROUP DEMOGRAPHIC)
           products = FasterCSV.read(file, {:header_converters => :symbol, :headers => header } )
@@ -104,8 +145,10 @@ namespace :spree do
         
         desc "Fetch Variant Option table from CSV file on FTP"
         task :variants => :environment do
+          Rake::Task["spree:extensions:hardcore:import:ftp"].invoke
+          
           file = "#{RAILS_ROOT}/IMPORT/options_20100517120000.csv"
-          header = %w(STYLE_NUMBER STYLE_CLR_CODE RIDER SEASON AVAILABLE_DATE OPTION_1_GROUP OPTION_1_DESC OPTION_1_SORT OPTION_1_FLAG OPTION_IMAGE_1 OPTION_IMAGE_2 OPTION_IMAGE_3 OPTION_IMAGE_4 OPTION_IMAGE_5 OPTION_IMAGE_6 OPTION_IMAGE_7 OPTION_IMAGE_8 OPTION_2_GROUP OPTION_2_DESC OPTION_2_SORT OPTION_2_FLAG BARCODE)
+          header = %w(STYLE_NUMBER STYLE_CLR_CODE RIDER SEASON AVAILABLE_DATE CONTENT OPTION_1_GROUP OPTION_1_DESC OPTION_1_SORT OPTION_1_FLAG OPTION_IMAGE_1 OPTION_IMAGE_2 OPTION_IMAGE_3 OPTION_IMAGE_4 OPTION_IMAGE_5 OPTION_IMAGE_6 OPTION_IMAGE_7 OPTION_IMAGE_8 OPTION_2_GROUP OPTION_2_DESC OPTION_2_SORT OPTION_2_FLAG BARCODE WEIGHT)
           variants = FasterCSV.read(file, {:header_converters => :symbol, :headers => header } )
 
           variants.each do |row|
@@ -175,6 +218,9 @@ namespace :spree do
 
         desc "Fetch Stocking table from CSV file on FTP"
         task :stocks => :environment do
+          Rake::Task["spree:extensions:hardcore:import:ftp"].invoke
+          
+          
           file = "#{RAILS_ROOT}/IMPORT/stocks_20100517120000.csv"
           header = %w(BARCODE STOCK_LEVEL)
           stocks = FasterCSV.read(file, {:header_converters => :symbol, :headers => header } )
@@ -190,9 +236,18 @@ namespace :spree do
             end
           end
         end
+        
+        desc "Fetch Retailer table from CSV file on FTP"
+        task :customers => :environment do
+          Rake::Task["spree:extensions:hardcore:import:ftp"].invoke
+          
+          header = %w(PRICE_SCHEME USERNAME PASSWORD ACCOUNT_NUMBER STORE_NAME CONTACT ADDRESS ADDRESS_2 CITY STATE POSTCODE COUNTRY PHONE EMAIL FAX STORE_TYPE)
+        end
 
         desc "Fetch Pricing table from CSV file on FTP"
         task :prices => :environment do
+          Rake::Task["spree:extensions:hardcore:import:ftp"].invoke
+          
           file = "#{RAILS_ROOT}/IMPORT/prices_20100517120000.csv"
           header = %w(STYLE_CLR_CODE PRICE_SCHEME CURRENCY PRICE MSRP DISCOUNT)
           prices = FasterCSV.read(file, {:header_converters => :symbol, :headers => header } )
