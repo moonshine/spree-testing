@@ -1,14 +1,14 @@
 require 'net/ftp'
 
 FILE_PREFIX = 'HC'
-FTP_HOST = 'ftp.hardcore.com.au'
-FTP_USR = 'ap21@hardcore.com.au'
+FTP_HOST = 'ftp.skateshop.com.au'
+FTP_USR = 'ap21'
 FTP_PASS = 'abc+123'
-INCOMING_PATH = 'IN'
-OUTGOING_PATH = 'OUT'
+INCOMING_PATH = 'INCOMING'
+OUTGOING_PATH = 'OUTGOING'
 
 # Fetch CSV files from FTP
-# type could be PRODUCT, OPTION, PRICE, STOCK and CUSTOMER
+# type could be Product, Option, Price, Stock and Customer
 # return Array of downloaded files
 def fetch_csv_from_ftp(type='*')
   puts 'Connecting to FTP...'
@@ -19,7 +19,7 @@ def fetch_csv_from_ftp(type='*')
     ftp.chdir(INCOMING_PATH)
     #We only fetch files with suffix that match today
     puts 'Checking for update...'
-    filenames = ftp.nlst("#{FILE_PREFIX}_#{type}_#{Time.now.strftime("%Y%m%d")}*")
+    filenames = ftp.nlst("#{FILE_PREFIX}_#{type}_#{Time.now.strftime("%d%m%Y")}*")
 
     unless filenames.count.zero?
       filenames.each{ |filename| 
@@ -68,7 +68,7 @@ namespace :spree do
         # rake spree:extensions:hardcore:import:products
         desc "Fetch Product table from CSV file on FTP and import all into DB"
         task :products => :environment do
-          files = fetch_csv_from_ftp('PRODUCT')
+          files = fetch_csv_from_ftp('Product')
           files.each do |file|
             puts "Preparing to import #{file}"
             header = %w(STYLE_NUMBER STYLE_DESC STYLE_FLAG SUPPLIER BRAND CATEGORY GROUP DEMOGRAPHIC)
@@ -153,8 +153,8 @@ namespace :spree do
         
         # rake spree:extensions:hardcore:import:variants
         desc "Fetch Variant Option table from CSV file on FTP"
-        task :variants => :environment do
-          files = fetch_csv_from_ftp('OPTION')
+        task :options => :environment do
+          files = fetch_csv_from_ftp('Option')
           files.each do |file|
             header = %w(STYLE_NUMBER STYLE_CLR_CODE RIDER SEASON AVAILABLE_DATE CONTENT OPTION_1_GROUP OPTION_1_DESC OPTION_1_SORT OPTION_1_FLAG OPTION_IMAGE_1 OPTION_IMAGE_2 OPTION_IMAGE_3 OPTION_IMAGE_4 OPTION_IMAGE_5 OPTION_IMAGE_6 OPTION_IMAGE_7 OPTION_IMAGE_8 OPTION_2_GROUP OPTION_2_DESC OPTION_2_SORT OPTION_2_FLAG BARCODE WEIGHT)
             variants = read_csv(file, header)
@@ -226,7 +226,7 @@ namespace :spree do
 
         desc "Fetch Stocking table from CSV file on FTP"
         task :stocks => :environment do
-          files = fetch_csv_from_ftp('STOCK')
+          files = fetch_csv_from_ftp('Stock')
           files.each do |file|
             header = %w(BARCODE STOCK_LEVEL)
             stocks = read_csv(file, header)
@@ -254,7 +254,7 @@ namespace :spree do
 
         desc "Fetch Pricing table from CSV file on FTP"
         task :prices => :environment do
-          files = fetch_csv_from_ftp('PRICE')
+          files = fetch_csv_from_ftp('Price')
           files.each do |file|
             header = %w(STYLE_CLR_CODE PRICE_SCHEME CURRENCY PRICE MSRP DISCOUNT)
             prices = read_csv(file, header)
@@ -281,7 +281,7 @@ namespace :spree do
         desc "Fetch all tables from FTP and import into DB"
         task :all => :environment do
           Rake::Task["spree:extensions:hardcore:import:products"].invoke
-          Rake::Task["spree:extensions:hardcore:import:variants"].invoke
+          Rake::Task["spree:extensions:hardcore:import:options"].invoke
           Rake::Task["spree:extensions:hardcore:import:stocks"].invoke
           Rake::Task["spree:extensions:hardcore:import:prices"].invoke
         end
