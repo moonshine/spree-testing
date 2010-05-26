@@ -1,1 +1,1 @@
-SPREE_EXTENSIONS_LOAD_ORDER = [:hardcore, :theme_default, :api, :calculators, :payment_gateway, :overview_dashboard, :all]
+SPREE_EXTENSIONS_LOAD_ORDER = [:payment_gateway, :api, :calculators, :overview_dashboard, :theme_default, :hardcore, :all]
