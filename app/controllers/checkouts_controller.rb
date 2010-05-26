@@ -125,17 +125,28 @@ class CheckoutsController < Spree::BaseController
 
   def load_data
     @countries = Checkout.countries.sort
-    if object.bill_address && object.bill_address.country
-      default_country = object.bill_address.country
-    elsif current_user && current_user.bill_address
-      default_country = current_user.bill_address.country
-    else
-      default_country = Country.find Spree::Config[:default_country_id]
-    end
-    @states = default_country.states.sort
+    # Retrieve bill address country and states
+    default_country = get_default_country(:bill_address)
+    @bill_states = default_country.states.sort
+    # Retrieve bill address country and states
+    default_country = get_default_country(:ship_address)
+    @ship_states = default_country.states.sort
 
     # prevent editing of a complete checkout
     redirect_to order_url(parent_object) if parent_object.checkout_complete
+  end
+  
+  # Determine the country for the specified address type,
+  # address type is either bill_address or shipping_address
+  def get_default_country(address_type)
+    if object.send(address_type) && object.send(address_type).country
+      default_country = object.send(address_type).country
+    elsif current_user && current_user.send(address_type)
+      default_country = current_user.send(address_type).country
+    else
+      default_country = Country.find Spree::Config[:default_country_id]
+    end
+    default_country
   end
 
   def set_state
